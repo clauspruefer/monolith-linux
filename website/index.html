@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Monolith Linux - hardened Linux from scratch</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta name="description" content="Monolith Linux - hardened linux from scratch">
+		<meta name="keywords" content="linux, security, hardening, operating system, x86, x86_64, citrix, xenserver, xen, XenServer, virtual machine, home">
+		<meta name="author" content="WEB/codeX, Claus Prüfer">
+		<meta name="google" content="notranslate">
+		<link rel="stylesheet" href="./styles.css" type="text/css">
+	</head>
+	<body>
+	<div id="logo-bar-bkgrd"></div>
+	<div id="logo-ml">
+		<a href="/home"><img src="/media/ml-logo.png" width="455" height="61"></a>
+	</div>
+	<div id="logo-ml-descr"></div>
+	<div id="logo-ml-pyramid"></div>
+	<div id="links-bkgrd"></div>
+	<div id="link-hilite"></div>
+	<div id="link-documentation">
+		<a href="/documentation" onmouseover="document.getElementById('link-hilite').style.left='0px';">
+			<img src="/media/link-documentation.png" width="175" height="26">
+		</a>
+	</div>
+	<div id="link-download">
+		<a href="/download" onmouseover="document.getElementById('link-hilite').style.left='175px';">
+			<img src="/media/link-download.png" width="175" height="26">
+		</a>
+	</div>
+	<div id="link-legal">
+		<a href="/legal" onmouseover="document.getElementById('link-hilite').style.left='350px';">
+			<img src="/media/link-legal.png" width="175" height="26">
+		</a>
+	</div>
+	<div id="link-contact">
+		<a href="/contact" onmouseover="document.getElementById('link-hilite').style.left='525px';">
+			<img src="/media/link-contact.png" width="175" height="26">
+		</a>
+	</div>
+	<div id="scroll-invisible"></div>
+	<div id="content">
+		<h2>Preface</h2>
+		<p>26.05.2014 - Monolith Linux Version 0.2 released.</p>
+		<p>Version 0.2 is especially aimed for small and secure Virtual Machines like Router, Firewalls, Load-Balancer (LVS), VPN-Concentrator or other Virtual Machines where security plays a major role. You also can use it for a install on Bare Metal systems, but Virtualization more and more plays a major role in computer technology and Bare Metal in my oppinion is a waste of ressources in times of "cheap" 48 core machines with Terrabytes of fast RAM.</p>
+		<p>All Security Features/Optimizations are especially for X86_64 architecture. Its based on Hardened Linux from Scratch (HLFS) and uses PaX/grsecurity with some additional Kernel Patches for Kernel Hardening. A Demo Template shipped with Monolith Linux contains a setup for Citrix XenServer&reg; VM. The documentation section in detail displays how to set up a working virtual XenServer&reg; Monolith Linux Machine including Partitioning.</p>
+		<p><a href="/documentation">> see: Documentation</a></p>
+		<h2>Templating/Profiles</h2>
+		<p>All Machine setup configurations can be stored in a template folder so you are able to do Version Control. Now edit your config(s) in the specified folder and run installation script with domain and profile name (detailed description see documentation):</p>
+		<div class="docbox">
+			# sudo ./sys/installer.sh -d sfl04.b.webcodex.de -p dummy01
+		</div>
+		<h2>Features</h2>
+		<ul>
+			<li>Monolithic Kernel (Static Kernel Build without Kernel Module Support)</li>
+			<li>PaX/grsecurity Kernel Hardening (see <a href="http://www.grsecurity.org">http://www.grsecurity.org</a>)</li>
+			<li>Ptrace Kernel functionality removed completely</li>
+			<li>GCC Stack Smashing Protector (--fstack-protector-all)</li>
+			<li>GLibC Fortify Source Protection</li>
+			<li>Position Independant Executables for most Binary Files</li>
+			<li>Linking with "-z,now" and "-z,relro"</li>
+			<li>Linux Kernel 3.2.56</li>
+		</ul>
+		<h2>Building Remarks/Prerequisites</h2>
+		<p>The System is completely build from Scratch (Source). GCC Version 4.7.3 has been used for successful compiling. Building with GCC Profiles has been "disabled" due to problems with single sources (e.g. openssl). The compiler settings are configured in every single build script, somehow this is not the best approach of a generic setup, but it works.</p>
+		<p>XenServer&reg; used for Virtualization: XenServer&reg; 6.2, XenCenter&reg; 6.2 on Intel Xeon(R) CPU E5-4610 0 @ 2.40GHz 48 CPU Core with Hyperthreading</p>
+		<p>For an apt enabled system (e.g. Ubuntu 12.04) add ubuntu-ppa-toolchain-restricted repository (for gcc-4.7 with plugin dev feature) to apt sources.</p>
+		<div class="docbox">
+			<b>> /etc/apt/sources.list</b>
+			<p>
+				deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main
+			</p>
+		</div>
+		<p>To install all needed Packages (Ubuntu 12.04 Server used in the example), install the following listed dpkg Packages with apt-get install.</p>
+		<div class="docbox">
+			<b>> Install Prerequisites on Ubuntu 12.04</b>
+			<p>
+				# apt-get install \<br>
+				gcc-4.7 \<br>
+				g++ \<br>
+				make \<br>
+				bison \<br>
+				flex \<br>
+				automake \<br>
+				texinfo \<br>
+				gawk \<br>
+				libtool \<br>
+				cvs \<br>
+				patch \<br>
+				git \<br>
+				libncurses5 libncurses5-dev libncursesw5 libncursesw5-dev
+			</p>
+		</div>
+		<h2>Feature Requests</h2>
+		<p><b>></b> Please feel free to contact us if you like to contribute in the following or different subprojects:</p>
+		<ul>
+			<li>Lightweight Package Manager</li>
+			<li>Xorg Integration</li>
+			<li>Xorg Lightweight Window-Manager</li>
+			<li>Porting YATE, OpenSIPS as secure Voip Engines</li>
+			<li>Porting to ARM Architecture</li>
+			<li>Centralized Template Management including strong SmartCard Security</li>
+		</ul>
+		<p><a href="/contact">> Contact</a></p>
+		<p>&nbsp;</p>
+		<p>>>> hosted by apache webserver on gentoo hardened os<br><a href="http://www.apache.org">http://www.apache.org</a><br><a href="http://www.gentoo.org">http://www.gentoo.org</a></p>
+		<p>&nbsp;</p>
+		<p>&nbsp;</p>
+		<p>&nbsp;</p>
+		<p>&nbsp;</p>
+	</div>
+	</body>
+</html>

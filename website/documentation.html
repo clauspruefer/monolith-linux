@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Monolith Linux - hardened Linux from scratch</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta name="description" content="Monolith Linux - hardened linux from scratch">
+		<meta name="keywords" content="linux, security, hardening, operating system, x86, x86_64, citrix, xenserver, xen server, xen, XenServer, virtual machine, documentation, docs">
+		<meta name="author" content="WEB/codeX, Claus Prüfer">
+		<meta name="google" content="notranslate">
+		<link rel="stylesheet" href="./styles.css" type="text/css">
+	</head>
+	<body>
+		<div id="logo-bar-bkgrd"></div>
+		<div id="logo-ml">
+			<a href="/home"><img src="/media/ml-logo.png" width="455" height="61"></a>
+		</div>
+		<div id="logo-ml-descr"></div>
+		<div id="logo-ml-pyramid"></div>
+		<div id="links-bkgrd"></div>
+		<div id="link-hilite"></div>
+		<div id="link-documentation">
+			<a href="/documentation" onmouseover="document.getElementById('link-hilite').style.left='0px';">
+				<img src="/media/link-documentation.png" width="175" height="26">
+			</a>
+		</div>
+		<div id="link-download">
+			<a href="/download" onmouseover="document.getElementById('link-hilite').style.left='175px';">
+				<img src="/media/link-download.png" width="175" height="26">
+			</a>
+		</div>
+		<div id="link-legal">
+			<a href="/legal" onmouseover="document.getElementById('link-hilite').style.left='350px';">
+				<img src="/media/link-legal.png" width="175" height="26">
+			</a>
+		</div>
+		<div id="link-contact">
+			<a href="/contact" onmouseover="document.getElementById('link-hilite').style.left='525px';">
+				<img src="/media/link-contact.png" width="175" height="26">
+			</a>
+		</div>
+		<div id="scroll-invisible"></div>
+		<div id="content">
+			<h2>Documentation</h2>
+			<p>The fastest approach is to download the XenServer&reg; .xva Image from the download section and import it into your running XenServer&reg; via XenCenter&reg;. With this you have all things setup including the Virtual HardDrive for the systemVM.</p>
+			<p>Create the systemVM (see section "Create systemVM on XenServer&reg;") and continue with section "Configuration Files Overview". Afterwards you are ready for system building.</p>
+			<h3>Create XenServer&reg; Virtual Machines</h3>
+			<p>a) Build VM (where your linux system will be compiled and linked) we call it "buildVM" as referenced later.<p>
+			<p>b) System VM (where your compiled system will be run after building) we call it "systemVM" as referenced later.</p>
+			<h3>Import buildVM via Command Line</h3>
+			<div class="docbox">
+				<b>> import buildVM</b>
+				<p>
+					# xe vm-import filename=download.xva
+				</p>
+			</div>
+			<h3>Create buildVM via Command Line</h3>
+			<p>If you did not already imported the provided .xva image, you can feel free to set up your own build Virtual Machine on your XenServer&reg;.</p>
+			<div class="docbox">
+				<b>> create networks</b>
+				<p>
+					# xe network-create MTU=9216 name-description="build-net1"  name-label="build-net1"
+				</p>
+				<b>> create vm from base template (here with 4GB memory and 4CPU)</b>
+				<p>
+					# xe vm-install new-name-label="build01.xen01-int" template="Other install media"<br>
+					# xe vm-memory-limits-set uuid=$VM_UUID static-min=4096MiB dynamic-min=4096MiB dynamic-max=4096MiB static-max=4096MiB<br>
+					# xe vm-param-set VCPUs-max=4 VCPUs-at-startup=4 uuid=$VM_UUID
+				</p>
+				<b>> create virtual disc image/block device</b>
+				<p>
+					# xe vdi-create sr-uuid=$SR_UUID type=user name-label=build01.xen01-int.media.root virtual-size=20GiB<br>
+					# xe vbd-create vdi-uuid=$VDI_UUID vm-uuid=$VM_UUID bootable=true type=Disk device=hda
+				</p>
+				<b>> attach nics to VM (customize to your network needs)</b>
+				<p>
+					# xe vif-create device=0 network-uuid=$NW_UUID vm-uuid=$VM_UUID
+				</p>
+			</div>
+			<h3>Create systemVM on XenServer&reg;</h3>
+			<p>To see the Installation Result you need to create the systemVM on the XenServer&reg; where the buildVM resides. Be careful, you have to assign the VDI temporarily to the buildVM. After building you clone the VDI to the systemVM, now you can customize, create VM snapshots/templates for later reuse.</p>
+			<div class="alertbox">
+				<b>Partitioning: Re-Check the Parition Setup in Monolith-Linux config file with XenServer&reg; Setup, else you get Install Errors.</b>
+			</div>
+			<div class="alertbox">
+				<b>Be clear: the VDI Image for the systemVM will be attached to the buildVM, because the build process will use for installation. After the install process you clone this partition and attach it to the final systemVM.</b>
+			</div>
+			<div class="docbox">
+				<b>> create vm from base template (here with 1GB memory and 2CPU)</b>
+				<p>
+					# xe vm-install new-name-label="dummy01.xen01-int" template="Other install media"
+					# xe vm-memory-limits-set uuid=$VM_UUID static-min=1024MiB dynamic-min=1024MiB dynamic-max=1024MiB static-max=1024MiB<br>
+					# xe vm-param-set VCPUs-max=2 VCPUs-at-startup=2 uuid=$VM_UUID
+				</p>
+				<b>> create virtual disc image/block device</b>
+				<p>
+					# xe vdi-create sr-uuid=$SR_UUID type=user name-label=fs01.xen01-int.media virtual-size=30GiB
+				</p>
+				<b>> attach to "buildVM" as hdb</b>
+				<p>
+					# xe vbd-create vdi-uuid=$VDI_UUID vm-uuid=$VM_BUILD_UUID bootable=false type=Disk device=hdb
+				</p>
+				<b>> attach nics to VM (customize to your network needs)</b>
+				<p>
+					# xe vif-create device=0 network-uuid=$NW_UUID vm-uuid=$VM_UUID
+				</p>
+			</div>
+			<h3>SSH Default User Settings</h3>
+			<p>After importing or installing the buildVM or after compiling and starting the systemVM you want to login to the machines via SSH. Both buildVM and systemVM have following default usernames and passwords set. The systemVM ssh base user and root PWD can be customized via configuration files (described later).</p>
+			<p>Be careful: The buildVM is a default Ubuntu with a configured sudo, so if you want to get root, you have to "sudo su -". The systemVM with Monolith-Linux on, does not provide a proper sudo config on the first install, you have to do a simple "su -" to get root.</p>
+			<div class="docbox">
+				<b>> buildVM</b>
+				<p>
+					ip: 192.168.0.1/24<br>
+					xen if: physical network 0
+				</p>
+				<p>
+					user: admin<br>
+					pass: adminadmin
+				</p>
+				<p>
+					user: root<br>
+					pass: rootroot
+				</p>
+				<b>> systemVM</b>
+				<p>
+					user: root<br>
+					pass: rootroot
+				</p>
+			</div>
+			<h3>Depacking/Cloning</h3>
+			<p>a) depacking</p>
+			<div class="docbox">
+				<b>> start buildVM</b>
+				<p>
+					# xe vm-start uuid=$VM_UUID
+				</p>
+				<b>> depack monolith linux</b>
+				<p>
+					# tar -xf monolith-linux-0.2.tar.bz2
+				</p>
+				<b>> depack monolith-linux templates</b>
+				<p>
+					# tar -xf monolith-linux-0.2-demo-templates.tar.bz2
+				</p>
+			</div>
+			<p>b) cloning</p>
+			<a href="/download">> see: Download</a>
+			<h3>Symlinking the (Demo) Templates</h3>
+			<p>If you setup an own buildVM via download or GIT, you have to symlink the templates to the main system template dir.</p>
+			<div class="docbox">
+				<b>> symlink templates (domain) to monolith template dir</b>
+				<p>
+					# cd monolith-linux-0.2/template<br>
+					# ln -s ../../monolith-linux-0.2-templates/sfl04.b.webcodex.de
+				</p>
+			</div>
+			<h3>Template Configuration Files Overview</h3>
+			<table class="configfiles">
+				<tr><th>Config File</th></td><th>Short Description</th></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> local.conf</td><td>main config file</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> make.conf</td><td>make settings, cflags</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> kernel.conf</td><td>linux kernel configuration file, see <a href="http://www.kernel.org">http://www.kernel.org</a></td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> partitions.txt</td><td>partition setup</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> sysctl.config</td><td>system control settings</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> sysctl_interface.conf</td><td>system control network interfcaces settings</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> packages_additional.conf</td><td>configure additional source code to compile</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> ssh/sshd_config</td><td>secure shell server configuration file</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> ssh/pub.key</td><td>ssh login user public key which gets autodeployed</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> sysconfig/console</td><td>console settings</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> sysconfig/iptables</td><td>firewall iptables settings</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> sysconfig/network</td><td>hostname</td></tr>
+				<tr><td class="spacer_configfiles_color" colspan="2"></td></tr>
+				<tr><td>> sysconfig/network-devices/*</td><td>single network interface config</td></tr>
+			</table>
+			<h3>Configuration Files explained</h3>
+			<b>> local.conf</b><br>
+			<table class="configfiles">
+				<tr>
+					<th>Constant Name</th></td><th>Values&nbsp;&nbsp;&nbsp;</th></td><th>Description</th>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>INSTALL__on_host</td><td>0|1</td><td>0: Install Virtual (on XenServer&reg; VM)<br>1: Install on HW Host</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>NET__hostname</td><td>string</td><td>Hostname. e.g. "dummy01". Will be automatically set in /etc/hostname, /etc/hosts and /etc/sysctl.conf (kernel.hostname).</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>NET__domain</td><td>string</td><td>Domainname. e.g. "webcodex.de". Will be automatically set in /etc/sysctl.conf (kernel.domainname)</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>NET__device</td><td>string</td><td>Interface which will be configured for install (if internet or else is required). e.g. "eth0"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>NET__ip</td><td>string</td><td>IPv4 Address. e.g. "10.0.0.1"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>NET__netmask</td><td>string</td><td>IPv4 Netmask. e.g. "255.0.0.0"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>NET__default_gw_ip</td><td>string</td><td>IPv4 Default Gateway. e.g. "10.0.0.254"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>NET__nameserver1</td><td>string</td><td>IPv4 First Nameserver used for resolving. e.g. "123.123.123.123"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>NET__nameserver2</td><td>string</td><td>IPv4 Second Nameserver used for resolving. e.g. "123.123.123.123"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>FS__devices</td><td>string</td><td>Device List which will be used while installation. e.g. "xvda"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>FS__devices_install_host</td><td>string</td><td>In Case of Virtual Install (INSTALL__on_host==0), device(s) which will be used instead.e.g. "xvdb"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>FS__mk_disklabel</td><td>0|1</td><td>Activate Disklabel Writing</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>FS__mk_disklabel_xvd%</td><td>msdos</td><td>Make MSDOS Disklabel on specified xvd% Device</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GRUB__install_device</td><td>string</td><td>Install GRUB on specified device. Be careful, for a virtual install this is the partition on the VM INSTALLER HOST. e.g. "/dev/xvdb" for /dev/xvda on the later SYSTEM HOST partition.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GRUB__install_partition</td><td>string</td><td>Define GRUB install partition. This is the partition on the SYSTEM HOST. e.g. "hd0,msdos2"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GRUB__root_partition</td><td>string</td><td>Define GRUB root partition. This is the partition on the SYSTEM HOST. e.g. "xvda2"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GRUB__boot_timeout</td><td>int</td><td>Define GRUB boot timeout in seconds. e.g. 60</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GRUB__boot_default</td><td>0|1</td><td>Define GRUB boot default.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GRUB__boot_fallback</td><td>0|1</td><td>Define GRUB boot fallback.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>ARCH__system</td><td>string</td><td>Define system architecture. At the moment, the default value of "X86_64" should not be changed.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GLIBC__minimal_locales</td><td>0|1</td><td>If set to 1, just install EN_US and DE_DE locales.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GLIBC__timezone</td><td>string</td><td>GLIBC Timezone. e.g. "Europe/Berlin"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>KERNEL__version</td><td>string</td><td>Linux Kernel Version. e.g. "linux-3.2.56"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>KERNEL__name</td><td>string</td><td>Complete Linux Kernel Name. e.g. "vmlinuz-3.2.56-1-hardened"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>GLOBAL__debug</td><td>int</td><td>Debug Level, for the dummy template set to 100. 0 disables debug output completely.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>ROOT__pwd</td><td>string</td><td>Encrypted Root Password. Will be used to set root Password at installation time. SHA512 Format.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>SSH__login_user</td><td>string</td><td>Additional User who will be created at installation time. e.g. "admin"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>SSH__login_user_shell</td><td>string</td><td>Additional User Shell. e.g. "/bin/bash"</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>SSH__login_user_pwd</td><td>string</td><td>Encrypted Additional User Password. Will be used to set user Password at installation time. SHA512 Format.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="3"></td></tr>
+				<tr>
+					<td>SSH__login_user_auth_key</td><td>0|1</td><td>Auto Deploy SSH Public Key for additional User.</td>
+				</tr>
+			</table>
+			<b>> partitions.txt</b>
+			<table class="configfiles">
+				<tr>
+					<th>Column&nbsp;&nbsp;</th></td><th>Type</th></td><th>Value</th></td><th>Description</th>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>1</td><td>Partition Type</td><td>prima|exten|logic&nbsp;&nbsp;</td><td>Partition Type: Primary, Extended, Logical.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>2</td><td>Device</td><td>devicename</td><td>Device Name, e.g. sda1|xvda1|xvdb2.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>3</td><td>InstallDevice</td><td>devicename</td><td>Install Device Name, for virtual install where Device Name while Installation differs from later SystemVM Device Name.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>4</td><td>Partition Type</td><td>82,83</td><td>Partition Type. 82=Linux Swap, 83=Linux, 85=Linux Extended.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>5</td><td>Filesystem Type</td><td>swap,ext3</td><td>Filesysten Type. swap, ext3, ext4, etc.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>6</td><td>Size</td><td>x[M|G]</td><td>Filesysten Size, e.g. 2000M or 20G.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>7</td><td>Boot</td><td>0|1</td><td>Bootable Partition.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>8</td><td>Mount Point</td><td>/mnt/foo</td><td>Partition Mountpoint.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>9</td><td>Mount Options</td><td>sw,noatime</td><td>Partition Mount Options.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>10</td><td>Label</td><td>string</td><td>Label Name.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>11</td><td>Filesystem Options</td><td>-</td><td>Filesystem Options.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>12</td><td>Filesystem Dump</td><td>0|1</td><td>Filesystem Dump enables/disabled.</td>
+				</tr>
+				<tr><td class="spacer_configfiles_color" colspan="4"></td></tr>
+				<tr>
+					<td>13</td><td>Filesystem Check Order</td><td>0-9</td><td>Filesystem Check Order.</td>
+				</tr>
+			</table>
+			<h3>Building</h3>
+			<p>The dummy01 template shipped with the Monolith-Linux Distribution is optimized for Intel X86_64. Following Compiler Flags (make.conf) have been set as default (-march=corei7 -O3) with 6 building threads (make -j6).</p>
+			<div class="docbox">
+				<b>> now start building the system with template domain "sfl04.b.webcodex.de" and profile "dummy01".</b>
+				<p>
+					if you are using the .xva image, then login as user admin (password: "adminadmin") and<br>
+					# cd /home/admin/monolith-linux-0.2
+				</p>
+				<p>
+					# sudo ./sys/installer.sh -d sfl04.b.webcodex.de -p dummy01
+				</p>
+			</div>
+			<h3>Clone Build Virtual Disc Image</h3>
+				<p>After building you should clone the install Virtual Disc Image and attach it to the systemVM. You can of course detach and attach the install Virtual Disc Image directly, but then you loose your build "snapshot".</p>
+			<div class="docbox">
+				<b>> find the correct VDI_UUID</b><br>
+				<p>
+					# xe vm-list<br>
+					get UUID for vm-name "buildVM"
+				</p>
+				<p>
+					# xe vbd-list | grep -A 2 -B 2 $VM_UUID<br>
+				</p>
+				<p>
+					for all relevant buildVM connected VBDs , we have to check if vdi-name-label="systemVM"<br>
+					# xe vbd-param-list uuid=$VBD_UUID<br>
+					as well the correct vdi-uuid is listed. use this one to clone in the next step.
+				</p>
+				<b>> clone build partition. write down the VDI_UUID for later deletion if something fails you have to re-clone the VDI.</b>
+				<p>
+					# xe vdi-clone uuid=$VDI_UUID new-name-label="systemVM-tmp-clone" new-name-description="systemVM-tmp-clone"
+				</p>
+				<b>> connect build device to VM</b>
+				<p>
+					# xe vbd-create vdi-uuid=$VDI_UUID vm-uuid=$VM_SYSTEM_UUID bootable=true type=Disk device=hda
+				</p>
+			</div>
+			<h3>Start systemVM</h3>
+				<p>If you already created the systemVM and did attach the VDI/VBD to it, now start the systemVM and check if everything went fine.</p>
+			<div class="docbox">
+				<b>> check console bootup</b>
+				<p>
+					if something went wrong, you have to fix config and recompile.
+				</p>
+				<b>> check ssh login</b>
+				<p>
+					if you can not login, check your network settings. you can use XenServer&reg; Console under XenCenter&reg; to edit the configs directly.
+				</p>
+				<b>> check base security</b>
+				<p>
+					use checksec.sh (find under /sys/security) to inspect if the binary/library files have correctly been built with all security enhancements. checksec.sh is from <a href="http://www.trapkit.de/tools/checksec.html">TRAPKIT.de</a></a>
+				</p>
+				<p>
+					# checksec.sh --dir /bin/<br>
+					# checksec.sh --dir /sbin/<br>
+					# checksec.sh --dir /usr/bin/<br>
+					# checksec.sh --dir /usr/sbin/<br>
+					# checksec.sh --dir /lib/<br>
+					# checksec.sh --dir /usr/lib/
+				</p>
+				<p>
+					some of the binaries are not built with all security features active, but this does not mean a lack of security. nevertheless it should be analyzed if the specified source code can be fixed to build the binaries with all security features enabled.
+				</p>
+			</div>
+			<h3>Beyond Installation - Monolith Linux Structure</h3>
+			<h4>System Structure Main</h4>
+			<div class="docbox_mono">
+				<p>
+					<b>/build</b><br>
+					|-<b>/src</b> - build sources<br>
+					<b>/config</b> - internal config files<br>
+					|-<b>/etc</b> - config files used as templates for system installation<br>
+					| |-<b>/init.d</b> - modified LFS bootscripts (iptables, asterisk added)<br>
+					<b>/sys</b> - internal code<br>
+					| |-<b>/compile</b><br>
+					| | |-<b>stage1</b> - stage1 build scripts<br>
+					| | |-<b>stage2</b> - stage2 build scripts<br>
+					| |-<b>/compilescripts</b> - additional source compile scripts<br>
+					| |-<b>/installscripts</b> - additional source installation scripts (POST install scripts)<br>
+					| |-<b>/misc</b> - misc scripts, e.g. version-check<br>
+					| |-<b>/security</b> - security scripts, e.g. checksec.sh<br>
+					<b>/template</b> (symlinked templates)<br>
+				</p>
+			</div>
+			<h4>System Structure Templates</h4>
+			<div class="docbox_mono">
+				<p>
+					<b>/$domain</b> - domain name<br>
+					|-<b>/$profile</b> - profile name, profile base dir<br>
+					| |-<b>/ssh</b> - ssh based config files<br>
+					| |-<b>/sysconfig</b> - /etc/sysconfig<br>
+					| | |-<b>/network-devices</b> - network interface configuration<br>
+				</p>
+			</div>
+			<p>&nbsp;</p>
+			<p>>>> hosted by apache webserver on gentoo hardened os<br><a href="http://www.apache.org">http://www.apache.org</a><br><a href="http://www.gentoo.org">http://www.gentoo.org</a></p>
+			<p>&nbsp;</p>
+			<p>&nbsp;</p>
+			<p>&nbsp;</p>
+			<p>&nbsp;</p>
+		</div>
+	</body>
+</html>
