@@ -1,0 +1,81 @@
+#!/bin/sh
+# Begin $rc_base/init.d/iptables
+
+# Based on LFS-3.1 Bootscripts and earlier.
+# iptables/ip6tables Script written by Claus Pruefer - pruefer@webcodex.de
+
+function iptables_flush {
+
+	$iptables -F
+
+	if [ "${IPTABLES_HAS_NAT_TABLE}" = "true" ]; then
+		$iptables -F -t nat
+	fi
+
+	if [ "${IPTABLES_HAS_MANGLE_TABLE}" = "true" ]; then
+		$iptables -F -t mangle
+	fi
+
+}
+
+
+. /etc/sysconfig/rc
+. /etc/sysconfig/network
+. $rc_functions
+
+iptables=/usr/local/sbin/iptables
+ip6tables=/usr/local/sbin/ip6tables
+
+
+case "$1" in
+
+    start)
+        boot_mesg "Applying IPTables (ipv4)..."
+	iptables_flush
+	. /etc/sysconfig/iptables
+
+	if [ "${IPv6}" = "on" ]; then
+        	boot_mesg "Applying IPTables (ipv6)..."
+		ip6tables_flush
+		. /etc/sysconfig/ip6tables
+	fi
+        ;;
+
+    stop)
+        boot_mesg "Removing IPTables (ipv4)..."
+	iptables_flush
+        $iptables -P INPUT $IPTABLES_RESET
+        $iptables -P FORWARD $IPTABLES_RESET
+        $iptables -P OUTPUT $IPTABLES_RESET
+
+	if [ "${IPv6}" = "on" ]; then
+        	boot_mesg "Removing IPTables (ipv6)..."
+        	ip6tables_flush
+		$ip6tables -P INPUT $IPTABLES_RESET
+        	$ip6tables -P FORWARD $IPTABLES_RESET
+        	$ip6tables -P OUTPUT $IPTABLES_RESET
+	fi
+
+        ;;
+
+    reload)
+        boot_mesg "Reloading IPTables"
+        /etc/rc.d/init.d/iptables stop
+        /etc/rc.d/init.d/iptables start
+        ;;
+
+    status)
+	boot_mesg "IPTables Status:"
+	$iptables -L -n -v
+	if [ "${IPv6}" = "on" ]; then
+		$ip6tables -L -n -v
+	fi
+        ;;
+
+    *)
+        echo "Usage: $0 {start|stop|reload|status}"
+        exit 1
+        ;;
+esac
+
+# End $rc_base/init.d/iptables

@@ -1,0 +1,19 @@
+# aliases
+alias ls='ls --color=auto'
+alias ll='ls -l'
+
+# dircolors
+eval $(dircolors -b /etc/dircolors)
+
+# coloured command prompt (red: root, green: users)
+NORMAL="\[\e[0m\]"
+RED="\[\e[1;31m\]"
+GREEN="\[\e[1;32m\]"
+
+# check for euid 0 (root)
+if [[ $EUID == 0 ]] ; then
+        PS1="$RED\u [ $NORMAL\w$RED ]# $NORMAL"
+else
+        PS1="$GREEN\u [ $NORMAL\w$GREEN ]\$ $NORMAL"
+fi
+

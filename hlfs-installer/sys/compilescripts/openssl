@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# import compiler/linker settings
+. /compiler.settings
+
+# cd to installation source
+cd /sources/openssl-1.0.1g
+
+# apply patches
+patch -Np1 -i ../openssl-1.0.1g-fix_parallel_build-1.patch
+patch -Np1 -i ../openssl-1.0.1g-fix_pod_syntax-1.patch
+
+# configure, disable assembler ssl2, ssl3, use zlib compression
+./config \
+--prefix=/usr \
+--openssldir=/usr/local/ssl \
+--libdir=lib \
+threads \
+shared \
+no-asm \
+no-ssl2 \
+no-ssl3 \
+zlib-dynamic
+
+# disable static build
+sed -i 's# libcrypto.a##;s# libssl.a##' Makefile
+sed -i '/libcrypto.a \$/c\' Makefile
+sed -i '/if \[ "\$\(FIPSCANLIB\)" = "libcrypto" \]; then \/,+4 d' Makefile
+
+# enhance compiler hardened flags
+sed -i "/^CFLAG=/ s/$/ $CFLAGS/" Makefile
+
+# build
+make depend
+make $MAKEFLAGS
+make install
+

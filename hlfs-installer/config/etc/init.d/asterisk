@@ -1,0 +1,59 @@
+#!/bin/sh
+
+#>> ----------------------------------------------------------------------------
+#>> SOURCE FUNCTIONS
+#>> ----------------------------------------------------------------------------
+
+. /etc/sysconfig/rc
+. $rc_functions
+
+#>> ----------------------------------------------------------------------------
+#>> VARS
+#>> ----------------------------------------------------------------------------
+
+pidfile=/var/run/asterisk.pid
+asterisk=/sources/asterisk-1.4.41/main/asterisk
+display_text="Asterisk PBX"
+
+#>> ----------------------------------------------------------------------------
+#>> MAIN
+#>> ----------------------------------------------------------------------------
+
+case "$1" in
+
+	start)
+
+	boot_mesg "Starting $display_text..."
+
+	#>> ----------------------------------------------------------------------------
+	#>> SET ULIMITS (MAX LOCKED MEMORY && OPEN FILES)
+	#>> ----------------------------------------------------------------------------
+
+	ulimit -l 256000
+	ulimit -n 100000
+
+	loadproc $asterisk
+
+	;;
+
+	stop)
+		boot_mesg "Stopping $display_text..."
+		killproc -p $pidfile asterisk
+	;;
+
+	restart)
+		$0 stop
+		sleep 1
+		$0 start
+	;;
+
+	status)
+		statusproc -p $pidfile asterisk
+	;;
+
+	*)
+		echo "Usage: $0 {start|stop|reload|restart|status}"
+		exit 1
+	;;
+esac
+

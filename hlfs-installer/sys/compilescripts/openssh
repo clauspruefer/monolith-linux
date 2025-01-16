@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# import compiler/linker settings
+. /compiler.settings
+
+# cd to installation source
+cd /sources/openssh-6.6p1
+
+# configure
+./configure \
+--prefix=/usr/local \
+--sysconfdir=/etc/ssh \
+--with-pie \
+--with-cflags="$CFLAGS" \
+--with-cppflags="$CXXFLAGS" \
+--with-ldflags="$LDFLAGS"
+
+# build
+make $MAKEFLAGS
+make install
+

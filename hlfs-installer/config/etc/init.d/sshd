@@ -1,0 +1,65 @@
+#!/bin/sh
+
+#>> ----------------------------------------------------------------------------
+#>> SOURCE FUNCTIONS
+#>> ----------------------------------------------------------------------------
+
+. /etc/sysconfig/rc
+. $rc_functions
+
+#>> ----------------------------------------------------------------------------
+#>> VARS
+#>> ----------------------------------------------------------------------------
+
+pidfile=/var/run/sshd.pid
+sshd=/usr/local/sbin/sshd
+binpath=/usr/local/bin
+etcpath=/etc/ssh
+
+#>> ----------------------------------------------------------------------------
+#>> MAIN
+#>> ----------------------------------------------------------------------------
+
+case "$1" in
+
+	start)
+
+		boot_mesg "Generating SSHd Host Keys when not exist..."
+
+		[ -f $etcpath/ssh_host_key ] || $binpath/ssh-keygen -t rsa1 -b 4096 -f $etcpath/ssh_host_key -N ""
+		[ -f $etcpath/ssh_host_rsa_key ] || $binpath/ssh-keygen -t rsa -b 4096 -f $etcpath/ssh_host_rsa_key -N ""
+		[ -f $etcpath/ssh_host_dsa_key ] || $binpath/ssh-keygen -t dsa -f $etcpath/ssh_host_dsa_key -N ""
+
+		boot_mesg "Starting SSH Server..."
+		loadproc $sshd -f $etcpath/sshd_config
+
+	;;
+
+	stop)
+		boot_mesg "Stopping SSH Server..."
+		killproc -p $pidfile sshd
+	;;
+
+	reload)
+		boot_mesg "Reloading SSH Server..."
+		reloadproc -p $pidfile sshd
+	;;
+
+	restart)
+		$0 stop
+		sleep 1
+		$0 start
+	;;
+
+	status)
+		statusproc -p $pidfile sshd
+	;;
+
+	*)
+		echo "Usage: $0 {start|stop|reload|restart|status}"
+		exit 1
+	;;
+esac
+
+# End $rc_base/init.d/sshd
+
